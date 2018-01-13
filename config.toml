@@ -1,0 +1,37 @@
+# publicserver
+# tcpproxy
+# natserver
+# clientconnect
+Mode = "publicserver"
+PublicServerAddr = "127.0.0.1:10011"
+
+[TcpProxies]
+    [TcpProxies.proxy80]
+    LocalBindAddr = "127.0.0.1:1234"
+    RemoteServerAddr = "fofa.so:80"
+
+    [TcpProxies.proxy22]
+    LocalBindAddr = "127.0.0.1:1235"
+    RemoteServerAddr = "106.39.208.89:22"
+
+[PublicServer]
+LocalBindAddr = "127.0.0.1:10011"
+
+
+[NatServer]
+    [NatServer.test]
+    RemoteServerAddr = "fofa.so:80"
+    ID = "test"
+
+    [NatServer.test1]
+    RemoteServerAddr = "106.39.208.89:22"
+    ID = "test1"
+
+[ClientConnect]
+    [ClientConnect.test]
+    LocalBindAddr = "127.0.0.1:1234"
+    ID = "test"
+
+    [ClientConnect.test1]
+    LocalBindAddr = "127.0.0.1:1235"
+    ID = "test1"
