@@ -13,8 +13,10 @@
 **注意：没有经过大量实际测试，请谨慎用于生产环境。**
 
 ## 编译
+由于用到了1.9才有的sync.Map, 所以编译环境必须是1.9+，见谅见谅 ；）
 ```
 git clone https://github.com/LubyRuffy/tcptunnel
+go get
 go build
 ```
 生成tcptunnel文件
@@ -42,8 +44,11 @@ GOOS=linux GOARCH=arm GOARM=5 go build
 - 作为client执行，放到需要访问内网服务器的客户端
 ```
 ./tcptunnel -m client
+
 然后连接本地端口就相当于连接natserver里面对应的服务器了
+
 ```
+natserver 和 client 通信是通过约定好一致的唯一ID来进行。
 
 ### 作为tcpproxy执行，也就是端口转发
 ```
