@@ -52,9 +52,9 @@ func bindConnToServer(id string, newconn net.Conn, session *ControlSession) {
 		log.Println("session.OpenStream error:", err)
 		return
 	}
-	log.Println("session.OpenStream ok, id is :", stream.ID)
+	log.Println("session.OpenStream ok, id is :", stream.ID())
 
-	stream.Write([]byte(fmt.Sprintf("CONNECT /%s HTTP/1.0\r\n\r\n", id)))
+	n, err := stream.Write([]byte(fmt.Sprintf("CONNECT /%s HTTP/1.0\r\n\r\n", id)))
 	if err != nil {
 		log.Println("stream.Write CONNECT error:", err)
 		return
@@ -62,7 +62,7 @@ func bindConnToServer(id string, newconn net.Conn, session *ControlSession) {
 
 	// 10秒读取超时
 	stream.SetReadDeadline(time.Now().Add(time.Duration(10) * time.Second))
-	n, err := stream.Read(buf)
+	n, err = stream.Read(buf)
 	if err != nil {
 		log.Println("stream.Read error:", err)
 		return

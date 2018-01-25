@@ -8,12 +8,12 @@ import (
 	"sync"
 )
 
-func tcpProxyPair(newconn net.Conn, remoteAddr string) {
+func tcpProxyPair(newconn net.Conn, v TcpProxyConfig) {
 	defer func() {
 		newconn.Close()
 	}()
 
-	outConn, err := net.Dial("tcp", remoteAddr)
+	outConn, err := net.Dial("tcp", v.RemoteServerAddr)
 	if err != nil {
 		panic(err)
 		return
@@ -23,19 +23,23 @@ func tcpProxyPair(newconn net.Conn, remoteAddr string) {
 		outConn.Close()
 	}()
 
-	IoBind(newconn, outConn, func(err interface{}) {
-		if err != io.EOF && err != nil {
-			log.Printf("IoBind failed: %v\n", err)
-		}
+	if v.Type == "http" {
+		HTTPBind(newconn, outConn, v.RemoteServerAddr, "-")
+	} else {
+		IoBind(newconn, outConn, func(err interface{}) {
+			if err != io.EOF && err != nil {
+				log.Printf("IoBind failed: %v\n", err)
+			}
 
-		inAddr := newconn.RemoteAddr().String()
-		outAddr := outConn.RemoteAddr().String()
-		log.Printf("newconn %s - %s released", inAddr, outAddr)
-	})
+			inAddr := newconn.RemoteAddr().String()
+			outAddr := outConn.RemoteAddr().String()
+			log.Printf("newconn %s - %s released", inAddr, outAddr)
+		})
+	}
 }
 
 // 端口转发
-func createOneTcpProxy(wg *sync.WaitGroup, localBindAddr string, remoteAddr string) {
+func createOneTcpProxy(wg *sync.WaitGroup, v TcpProxyConfig) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("bind crashed : %s", err)
@@ -43,14 +47,14 @@ func createOneTcpProxy(wg *sync.WaitGroup, localBindAddr string, remoteAddr stri
 		wg.Done()
 	}()
 
-	l, err := net.Listen("tcp", localBindAddr)
+	l, err := net.Listen("tcp", v.LocalBindAddr)
 	if err == nil {
-		log.Printf("bind server to %s ok, listenning...\n", localBindAddr)
+		log.Printf("bind server to %s ok, listenning...\n", v.LocalBindAddr)
 		for {
 			var conn net.Conn
 			conn, err = l.Accept()
 			if err == nil {
-				go tcpProxyPair(conn, remoteAddr)
+				go tcpProxyPair(conn, v)
 			} else {
 				panic(err)
 				return
@@ -65,7 +69,7 @@ func tcpProxy() {
 	wg := sync.WaitGroup{}
 	for _, v := range configOptions.TcpProxies {
 		fmt.Printf("proxy of %s -> %s \n", v.LocalBindAddr, v.RemoteServerAddr)
-		go createOneTcpProxy(&wg, v.LocalBindAddr, v.RemoteServerAddr)
+		go createOneTcpProxy(&wg, v)
 		wg.Add(1)
 	}
 	wg.Wait()

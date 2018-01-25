@@ -14,7 +14,7 @@ import (
 	"github.com/xtaci/smux"
 )
 
-func connectOneServer(publicServerAddr string, registerID string, remoteServerAddr string) (err error) {
+func connectOneServer(publicServerAddr string, v NatServerConfig) (err error) {
 	cli, err := net.DialTimeout("tcp", publicServerAddr, time.Second*10)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Dial to server %s failed: %v!", publicServerAddr, err))
@@ -37,7 +37,7 @@ func connectOneServer(publicServerAddr string, registerID string, remoteServerAd
 	buf := make([]byte, 65536)
 	var n int
 
-	stream.Write([]byte(fmt.Sprintf("REGISTER /%s HTTP/1.0\r\n\r\n", registerID)))
+	stream.Write([]byte(fmt.Sprintf("REGISTER /%s HTTP/1.0\r\n\r\n", v.ID)))
 	n, err = stream.Read(buf)
 	if err != nil {
 		return errors.New(fmt.Sprintf("stream.Read failed: %v", err))
@@ -56,11 +56,12 @@ func connectOneServer(publicServerAddr string, registerID string, remoteServerAd
 			go func(id string) {
 				stream, _ := session.OpenStream()
 				defer func() {
+					log.Printf("close stream id: %v\n", id)
 					stream.Close()
 				}()
 				n, err = stream.Write([]byte(fmt.Sprintf("DATASTREAM %s HTTP/1.0\r\n\r\n", id)))
 				if err != nil {
-					//errors.New(fmt.Sprintf("stream.Write failed: %v", err))
+					log.Println(fmt.Sprintf("stream.Write failed: %v", err))
 					return
 				}
 				n, err = stream.Read(buf)
@@ -68,26 +69,30 @@ func connectOneServer(publicServerAddr string, registerID string, remoteServerAd
 					log.Printf("stream.Read failed: %v\n", err)
 					return
 				}
-				log.Printf("stream.Read : %s\n", string(buf[:n]))
-				log.Printf("try to net.Dial to %s\n", remoteServerAddr)
+				//log.Printf("%s stream.Read : %s\n", id, string(buf[:n]))
+				log.Printf("%s try to net.Dial to %s\n", id, v.RemoteServerAddr)
 
-				outConn, err := net.Dial("tcp", remoteServerAddr)
+				outConn, err := net.Dial("tcp", v.RemoteServerAddr)
 				if err != nil {
-					log.Printf("net.Dial failed: %v", err)
+					log.Printf("%s net.Dial failed: %v", id, err)
 					return
 				}
+				log.Printf("%s net.Dial to %s ok\n", id, v.RemoteServerAddr)
 
-				log.Printf("net.Dial to %s ok\n", remoteServerAddr)
+				if v.Type == "http" {
+					HTTPBind(stream, outConn, v.RemoteServerAddr, id)
+				} else {
+					IoBind(stream, outConn, func(err interface{}) {
+						if err != io.EOF && err != nil {
+							log.Printf("IoBind failed: %v\n", err)
+						}
 
-				IoBind(stream, outConn, func(err interface{}) {
-					if err != io.EOF && err != nil {
-						log.Printf("IoBind failed: %v\n", err)
-					}
+						inAddr := stream.RemoteAddr().String()
+						outAddr := outConn.RemoteAddr().String()
+						log.Printf("conn %s - %s released", inAddr, outAddr)
+					})
+				}
 
-					inAddr := stream.RemoteAddr().String()
-					outAddr := outConn.RemoteAddr().String()
-					log.Printf("conn %s - %s released", inAddr, outAddr)
-				})
 			}(req.RequestURI)
 		default:
 			log.Println("Unknown msg type")
@@ -98,14 +103,14 @@ func connectOneServer(publicServerAddr string, registerID string, remoteServerAd
 }
 
 // 控制stream通道
-func connectServer(wg *sync.WaitGroup, publicServerAddr string, registerID string, remoteServerAddr string) {
+func connectServer(wg *sync.WaitGroup, publicServerAddr string, v NatServerConfig) {
 	defer func() {
 		wg.Done()
 	}()
 
 	var err error
 	for {
-		err = connectOneServer(publicServerAddr, registerID, remoteServerAddr)
+		err = connectOneServer(publicServerAddr, v)
 		if err != nil {
 			log.Println(err)
 			time.Sleep(time.Second * 5)
@@ -119,7 +124,7 @@ func natServer() {
 	wg := sync.WaitGroup{}
 	for _, v := range configOptions.NatServer {
 		fmt.Printf("ID %s -> %s \n", v.ID, v.RemoteServerAddr)
-		go connectServer(&wg, configOptions.PublicServerAddr, v.ID, v.RemoteServerAddr)
+		go connectServer(&wg, configOptions.PublicServerAddr, v)
 		wg.Add(1)
 	}
 	wg.Wait()

@@ -107,3 +107,59 @@ func recvReq(stream *smux.Stream) (req *http.Request, err error) {
 	req, err = http.ReadRequest(r)
 	return
 }
+
+func handleRequest(conn net.Conn, outConn net.Conn, inReq *http.Request, remoteAddr string) (resp *http.Response, err error) {
+	if inReq == nil {
+		return
+	}
+
+	outReq := new(http.Request)
+	*outReq = *inReq // includes shallow copies of maps, but we handle this in Director
+	outReq.Host = remoteAddr
+	err = outReq.Write(outConn)
+	if err != nil {
+		log.Printf("[http] %s - %s : %s", conn.RemoteAddr(), conn.LocalAddr(), err)
+		return
+	}
+
+	resp, err = http.ReadResponse(bufio.NewReader(outConn), outReq)
+	if err != nil {
+		log.Printf("[http] %s - %s : %s", conn.RemoteAddr(), conn.LocalAddr(), err)
+		return
+	}
+	return
+}
+
+func HTTPBind(conn net.Conn, outConn net.Conn, remoteAddr string, id string) {
+	defer func() {
+		conn.Close()
+		outConn.Close()
+	}()
+	for {
+		req, err := http.ReadRequest(bufio.NewReader(conn))
+		if err != nil {
+			log.Printf("%s [http ReadRequest from conn] %s - %s : %s", id, conn.RemoteAddr(), conn.LocalAddr(), err)
+			return
+		}
+
+		log.Printf("%s [http] %s - %s : %v -> ", id, conn.RemoteAddr(), conn.LocalAddr(), req.URL)
+
+		resp, err := handleRequest(conn, outConn, req, remoteAddr)
+		if err != nil {
+			log.Printf("%s [http handleRequest] %s - %s : %s", id, conn.RemoteAddr(), conn.LocalAddr(), err)
+			return
+		}
+
+		log.Printf("%s [http] %s - %s : %v -> %s <-", id, conn.RemoteAddr(), conn.LocalAddr(), req.URL, resp.Status)
+
+		err = resp.Write(conn)
+		if err != nil {
+			log.Printf("%s [http Write to conn] %s - %s : %s", id, conn.RemoteAddr(), conn.LocalAddr(), err)
+			return
+		}
+
+		log.Printf("%s [http finished] %s - %s : %v -> %s <-", id, conn.RemoteAddr(), conn.LocalAddr(), req.URL, resp.Status)
+
+		return
+	}
+}

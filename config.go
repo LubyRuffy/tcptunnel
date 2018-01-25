@@ -8,11 +8,13 @@ import (
 	"runtime/pprof"
 
 	"github.com/BurntSushi/toml"
+	//"go/types"
 )
 
 type TcpProxyConfig struct {
 	LocalBindAddr    string
 	RemoteServerAddr string
+	Type             string
 }
 
 type PublicServerConfig struct {
@@ -27,6 +29,7 @@ type ClientConnectConfig struct {
 type NatServerConfig struct {
 	RemoteServerAddr string
 	ID               string
+	Type             string
 }
 
 type TomlConfig struct {
