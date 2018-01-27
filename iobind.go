@@ -102,12 +102,6 @@ func listenTCPServer(wg *sync.WaitGroup, addr string, fn onConnection) (err erro
 	}
 }
 
-func recvReq(stream *smux.Stream) (req *http.Request, err error) {
-	r := bufio.NewReader(stream)
-	req, err = http.ReadRequest(r)
-	return
-}
-
 func handleRequest(conn net.Conn, outConn net.Conn, inReq *http.Request, remoteAddr string) (resp *http.Response, err error) {
 	if inReq == nil {
 		return
@@ -142,7 +136,7 @@ func HTTPBind(conn net.Conn, outConn net.Conn, remoteAddr string, id string) {
 			return
 		}
 
-		log.Printf("%s [http] %s - %s : %v -> ", id, conn.RemoteAddr(), conn.LocalAddr(), req.URL)
+		// log.Printf("%s [http] %s - %s : %v -> ", id, conn.RemoteAddr(), conn.LocalAddr(), req.URL)
 
 		resp, err := handleRequest(conn, outConn, req, remoteAddr)
 		if err != nil {
@@ -150,7 +144,7 @@ func HTTPBind(conn net.Conn, outConn net.Conn, remoteAddr string, id string) {
 			return
 		}
 
-		log.Printf("%s [http] %s - %s : %v -> %s <-", id, conn.RemoteAddr(), conn.LocalAddr(), req.URL, resp.Status)
+		// log.Printf("%s [http] %s - %s : %v -> %s <-", id, conn.RemoteAddr(), conn.LocalAddr(), req.URL, resp.Status)
 
 		err = resp.Write(conn)
 		if err != nil {
@@ -158,7 +152,7 @@ func HTTPBind(conn net.Conn, outConn net.Conn, remoteAddr string, id string) {
 			return
 		}
 
-		log.Printf("%s [http finished] %s - %s : %v -> %s <-", id, conn.RemoteAddr(), conn.LocalAddr(), req.URL, resp.Status)
+		// log.Printf("%s [http finished] %s - %s : %v -> %s <-", id, conn.RemoteAddr(), conn.LocalAddr(), req.URL, resp.Status)
 
 		return
 	}
