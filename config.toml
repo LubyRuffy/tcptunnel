@@ -15,7 +15,7 @@ PublicServerAddr = "127.0.0.1:10011"
     RemoteServerAddr = "192.168.1.1:22"
 
 [PublicServer]
-LocalBindAddr = "127.0.0.1:10011"
+LocalBindAddr = "0.0.0.0:10011"
 
 
 [NatServer]
