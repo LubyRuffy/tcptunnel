@@ -2,17 +2,18 @@
 # tcpproxy
 # natserver
 # client
-Mode = "publicserver"
+Mode = "natserver"
 PublicServerAddr = "127.0.0.1:10011"
 
 [TcpProxies]
     [TcpProxies.proxy80]
     LocalBindAddr = "127.0.0.1:1234"
-    RemoteServerAddr = "192.168.1.1:80"
+    RemoteServerAddr = "192.168.0.1:80"
+    Type = "http"
 
     [TcpProxies.proxy22]
     LocalBindAddr = "127.0.0.1:1235"
-    RemoteServerAddr = "192.168.1.1:22"
+    RemoteServerAddr = "192.168.0.1:22"
 
 [PublicServer]
 LocalBindAddr = "0.0.0.0:10011"
@@ -20,11 +21,12 @@ LocalBindAddr = "0.0.0.0:10011"
 
 [NatServer]
     [NatServer.test]
-    RemoteServerAddr = "192.168.1.1:80"
+    RemoteServerAddr = "192.168.0.1:80"
     ID = "test"
+    Type = "http"
 
     [NatServer.test1]
-    RemoteServerAddr = "192.168.1.1:22"
+    RemoteServerAddr = "192.168.0.1:22"
     ID = "test1"
 
 [ClientConnect]

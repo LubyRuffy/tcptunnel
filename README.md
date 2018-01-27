@@ -71,6 +71,7 @@ PublicServerAddr = "127.0.0.1:10011"
     [TcpProxies.proxy80]
     LocalBindAddr = "127.0.0.1:1234"
     RemoteServerAddr = "192.168.1.1:80"
+    Type = "http"
 
     [TcpProxies.proxy22]
     LocalBindAddr = "127.0.0.1:1235"
@@ -86,6 +87,7 @@ LocalBindAddr = "127.0.0.1:10011"
     [NatServer.test]
     RemoteServerAddr = "192.168.1.1:80"
     ID = "test"
+    Type = "http"
 
     [NatServer.test1]
     RemoteServerAddr = "192.168.1.1:22"
