@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	PrintVersion()
 	log.Println("Mode is :", configOptions.Mode)
 	switch configOptions.Mode {
 	case "tcpproxy":
