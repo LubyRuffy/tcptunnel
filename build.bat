@@ -13,6 +13,8 @@ call :build windows amd64 .exe
 call :armv5
 goto :end
 
+mkdir .\releases
+
 :build
   mkdir .\%1\%2
   set GOOS=%1
