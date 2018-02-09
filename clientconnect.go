@@ -109,6 +109,7 @@ func clientConnect() {
 	for _, v := range configOptions.ClientConnect {
 
 		go func(config ClientConnectConfig) {
+			log.Println("bind ", config.LocalBindAddr, " to ", config.ID)
 			listenTCPServer(&wg, config.LocalBindAddr, func(newconn net.Conn) {
 				bindConnToServer(config.ID, newconn, &session)
 			})
