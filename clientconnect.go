@@ -79,7 +79,8 @@ func bindConnToServer(id string, newconn net.Conn, session *ControlSession) {
 			}
 		})
 	} else {
-		log.Printf("CONNECT to server failed\n")
+		log.Printf("CONNECT to server failed: %s\n", string(buf[:n]))
+		return
 	}
 }
 

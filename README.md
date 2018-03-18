@@ -100,3 +100,12 @@ LocalBindAddr = "127.0.0.1:10011"
     LocalBindAddr = "127.0.0.1:1234"
     ID = "test"
 ```
+
+## 流程说明
+```
+natserver    REGISTER   -> publicserver
+                           publicserver <- CONNECT client <- application tcp connect
+natserver NEWDATASTREAM <- publicserver
+natserver   DATASTREAM  -> publicserver
+                           publicserver -> 200 OK client <-> application tcp connect
+```

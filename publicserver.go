@@ -25,11 +25,26 @@ var dataStreamMap sync.Map // 数据通道流
 // 公网监听服务器
 func listenPublicServer(wg *sync.WaitGroup, addr string, fn onStream) (err error) {
 	err = listenTCPServer(wg, addr, func(newconn net.Conn) {
+
 		sess, err := smux.Server(newconn, nil)
 		if err != nil {
 			log.Printf("smux should not fail with default config: %v", err)
 			return
 		}
+
+		// 断开连接后取消所有ID的注册 https://github.com/LubyRuffy/tcptunnel/issues/3
+		session_streams := make([]*smux.Stream, 0)
+		defer func() {
+			for _, s := range session_streams {
+				natCtlMap.Range(func(k, v interface{}) bool {
+					if s == v.(*ControlStream).Stream {
+						log.Printf("unregister ID: %v", k)
+						natCtlMap.Delete(k)
+					}
+					return true
+				})
+			}
+		}()
 
 		for {
 			stream, err := sess.AcceptStream()
@@ -42,6 +57,7 @@ func listenPublicServer(wg *sync.WaitGroup, addr string, fn onStream) (err error
 			go func(newstream *smux.Stream) {
 				fn(newstream)
 			}(stream)
+			session_streams = append(session_streams, stream)
 		}
 	})
 	return
@@ -107,6 +123,10 @@ func doConnect(req *http.Request, stream *smux.Stream) {
 		})
 	} else {
 		log.Println("Could not found stream of id : ", req.RequestURI)
+
+		// https://github.com/LubyRuffy/tcptunnel/issues/2
+		stream.Write([]byte("404 ID Not Found\r\n\r\n"))
+		stream.Close()
 	}
 }
 
@@ -126,6 +146,7 @@ func publicServer() {
 	wg := sync.WaitGroup{}
 
 	listenPublicServer(&wg, configOptions.PublicServer.LocalBindAddr, func(stream *smux.Stream) {
+
 		req, err := http.ReadRequest(bufio.NewReader(stream))
 		if err != nil {
 			log.Printf("recv request failed: %v", err)
@@ -139,9 +160,19 @@ func publicServer() {
 			go doConnect(req, stream)
 		case "REGISTER":
 			log.Println("REGISTER msg to ", req.RequestURI)
-			ctlStream := ControlStream{Stream: stream}
-			natCtlMap.Store(req.RequestURI, &ctlStream)
-			stream.Write([]byte("200 OK\r\n\r\n"))
+
+			// 排他唯一性，https://github.com/LubyRuffy/tcptunnel/issues/3
+			if _, ok := natCtlMap.Load(req.RequestURI); ok {
+				log.Println("ID Already Registered", req.RequestURI, ", reject it!")
+				stream.Write([]byte("500 ID Already Registered\r\n\r\n"))
+				stream.Close()
+				return
+			} else {
+				ctlStream := ControlStream{Stream: stream}
+				natCtlMap.Store(req.RequestURI, &ctlStream)
+				stream.Write([]byte("200 OK\r\n\r\n"))
+			}
+
 			// log.Println("DUMP====")
 			// natCtlMap.Range(func(key, value interface{}) bool {
 			// 	log.Println(key, value)
