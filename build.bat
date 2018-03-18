@@ -1,3 +1,4 @@
+mkdir .\releases
 
 call :build linux arm  
 call :build linux amd64  
@@ -12,8 +13,6 @@ call :build windows 386 .exe
 call :build windows amd64 .exe
 call :armv5
 goto :end
-
-mkdir .\releases
 
 :build
   mkdir .\%1\%2
